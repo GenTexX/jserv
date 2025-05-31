@@ -1,0 +1,21 @@
+<configuration>
+
+     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                %d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%logger{36}) - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
+    </root>
+    <!-- Disable logging for specific packages -->
+    <logger name="org.xnio.nio" level="OFF" />
+    <logger name="org.xnio" level="OFF" />
+    <logger name="io.undertow" level="OFF" />
+    <logger name="org.jboss.threads" level="OFF" />
+    <logger name="org.jboss.logging" level="OFF" />
+
+</configuration>

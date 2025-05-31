@@ -1,6 +1,7 @@
 package com.schulz.jserv.core;
 
 import com.schulz.jserv.core.dispatcher.JsrvDispatcher;
+import com.schulz.jserv.core.filter.JsrvFilterChain;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -34,10 +35,11 @@ public class JsrvHttpHandler implements HttpHandler {
 
     }
 
-    private void dispatchRequest(String dispatcherName, JsrvExchange exchange) {
+    private void dispatchRequest(String dispatcherName, JsrvExchange exchange) throws Exception {
         JsrvDispatcher dispatcher = server.getDispatcher(dispatcherName);
+        JsrvFilterChain chain = new JsrvFilterChain(this.server.getFilters(), dispatcher);
         if (dispatcher != null) {
-            if (!dispatcher.onRequest(exchange)) {
+            if (!chain.next(exchange)) {
                 exchange.getExchange().setStatusCode(404);
                 exchange.getExchange().getResponseSender().send("Not Found");
             }
