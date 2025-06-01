@@ -16,6 +16,8 @@ public class JsrvLoggingFilter implements JsrvFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JsrvLoggingFilter.class);
 
+    public static final String LOGGING_FILTER_KEY = "jsrv_core_logging_filter";
+
     @Override
     public boolean handle(JsrvExchange exchange, JsrvFilterChain jsrvFilterChain) throws Exception {
         
@@ -36,6 +38,11 @@ public class JsrvLoggingFilter implements JsrvFilter {
         logger.info("Request received: {} {}?{}", method, path, params.toString());
         return jsrvFilterChain.next(exchange);
         
+    }
+
+    @Override
+    public String getKey() {
+        return LOGGING_FILTER_KEY;
     }
     
 }

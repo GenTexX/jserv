@@ -10,7 +10,10 @@ import org.slf4j.LoggerFactory;
 
 import com.schulz.jserv.core.dispatcher.JsrvDispatcher;
 import com.schulz.jserv.core.filter.JsrvFilter;
+import com.schulz.jserv.core.filter.impl.JsrvCorsFilter;
 import com.schulz.jserv.core.filter.impl.JsrvLoggingFilter;
+import com.schulz.jserv.http.JsrvHttpMethod;
+import com.schulz.jserv.security.cors.JsrvCorsConfig;
 
 import io.undertow.Undertow;
 
@@ -26,6 +29,8 @@ public class JsrvServer {
 
     private Undertow server;
 
+    private JsrvCorsConfig corsConfig;
+
     public JsrvServer() {
         this.startupTasks = new ArrayList<>();
         this.dispatchers = new HashMap<>();
@@ -35,7 +40,7 @@ public class JsrvServer {
     public void start() throws Exception {
 
         logger.info("Starting JServ server");
-    
+
         // initialization
         init();
 
@@ -51,18 +56,18 @@ public class JsrvServer {
 
     private void init() throws Exception {
 
-        
         logger.info("Initializing JServ server");
 
         this.addFilter(new JsrvLoggingFilter());
-        
+        this.addFilter(new JsrvCorsFilter(this));
+
         // read configuration
         readConfiguration();
-        
+
         performStartupTasks();
-        
+
         performPostInitTasks();
-        
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             this.shutdown();
         }));
@@ -74,12 +79,17 @@ public class JsrvServer {
     }
 
     private void readConfiguration() {
+        readServerConfiguration();
+        readCorsConfiguration();
+    }
+
+    private void readServerConfiguration() {
 
         logger.info("Reading server configuration");
 
         String host = ApplicationConfig.getValue(JsrvServerConfig.HOST_KEY);
         Integer port = ApplicationConfig.getValue(JsrvServerConfig.PORT_KEY);
-        
+
         if (host == null) {
             logger.error("Server host configuration is missing");
             throw new RuntimeException("Server host configuration is missing");
@@ -91,6 +101,54 @@ public class JsrvServer {
         this.serverConfig = new JsrvServerConfig(host, port);
 
         logger.info("Server configuration loaded: host={}, port={}", serverConfig.getHost(), serverConfig.getPort());
+
+    }
+
+    private void readCorsConfiguration() {
+
+        if (ApplicationConfig.getValue(JsrvCorsConfig.ENABLED_KEY) != Boolean.TRUE) {
+            logger.info("CORS configuration is disabled, skipping CORS setup");
+            return;
+        }
+
+        logger.info("Reading cors configuration");
+        this.corsConfig = new JsrvCorsConfig();
+
+        String allowedOrigin = ApplicationConfig.getValue(JsrvCorsConfig.ORIGIN_KEY);
+        if (allowedOrigin == null || allowedOrigin.isEmpty()) {
+            logger.warn("CORS origin configuration is missing, defaulting to '*'");
+            allowedOrigin = "*"; // Default value
+        }
+        this.corsConfig.setAllowedOrigin(allowedOrigin);
+
+        List<String> allowedMethodNames = ApplicationConfig.getValue(JsrvCorsConfig.METHODS_KEY);
+        List<JsrvHttpMethod> allowedMethods = new ArrayList<>();
+        if (allowedMethodNames != null && !allowedMethodNames.isEmpty()) {
+            for (String methodName : allowedMethodNames) {
+                if (JsrvHttpMethod.isValid(methodName)) {
+                    allowedMethods.add(JsrvHttpMethod.fromString(methodName));
+                } else {
+                    logger.warn("Invalid HTTP method in CORS configuration: {}", methodName);
+                }
+            }
+        }
+        if (allowedMethods == null || allowedMethods.isEmpty()) {
+            logger.warn("CORS methods configuration is missing, defaulting to GET, POST, PUT, DELETE, OPTIONS");
+            allowedMethods = List.of(JsrvHttpMethod.GET, JsrvHttpMethod.POST, JsrvHttpMethod.PUT, JsrvHttpMethod.DELETE, JsrvHttpMethod.OPTIONS);
+        }
+        this.corsConfig.setAllowedMethods(allowedMethods);
+
+        List<String> allowedHeaders = ApplicationConfig.getValue(JsrvCorsConfig.HEADERS_KEY);
+        if (allowedHeaders == null || allowedHeaders.isEmpty()) {
+            logger.warn("CORS headers configuration is missing, defaulting to Content-Type, Authorization");
+            allowedHeaders = List.of("Content-Type", "Authorization");
+        }
+
+        this.corsConfig.setAllowedHeaders(allowedHeaders);
+
+        logger.info("Cors configuration loaded: origin={}, methods={}, headers={}", corsConfig.getAllowedOrigin(), corsConfig.getAllowedMethods().orElse(null), corsConfig.getAllowedHeaders().orElse(null));
+
+
 
     }
 
@@ -113,7 +171,7 @@ public class JsrvServer {
             }
         }
 
-        return totalTime;        
+        return totalTime;
     }
 
     private void performPostInitTasks() throws Exception {
@@ -151,7 +209,7 @@ public class JsrvServer {
             return null;
         }
         JsrvDispatcher dispatcher = dispatchers.get(dispatcherName);
-        
+
         return dispatcher;
     }
 
@@ -161,7 +219,60 @@ public class JsrvServer {
 
     public void addFilter(JsrvFilter filter) {
         this.filters.add(filter);
+        logger.info("Added filter {} at the end of the filter chain", filter.getKey());
     }
 
+    public void addFilterAfterKey(String key, JsrvFilter filter) {
+        if (key == null || key.isEmpty()) {
+            logger.warn("Key is null or empty, adding filter at the end");
+            filters.add(filter);
+            return;
+        }
+
+        int index = -1;
+        for (int i = 0; i < filters.size(); i++) {
+            if (filters.get(i).getKey().equals(key)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1) {
+            logger.warn("Key not found, adding filter at the end");
+            filters.add(filter);
+        } else {
+            filters.add(index + 1, filter);
+            logger.info("Added filter {} after key: {}", filter.getKey(), key);
+        }
+    }
+
+    public void addFilterBeforeKey(String key, JsrvFilter filter) {
+        if (key == null || key.isEmpty()) {
+            logger.warn("Key is null or empty, adding filter at the end");
+            filters.add(filter);
+            return;
+        }
+
+        int index = -1;
+        for (int i = 0; i < filters.size(); i++) {
+            if (filters.get(i).getKey().equals(key)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1) {
+            logger.warn("Key not found, adding filter at the end");
+            filters.add(filter);
+        } else {
+            filters.add(index + 1, filter);
+            logger.info("Added filter {} before: {}", filter.getKey(), key);
+        }
+
+    }
+
+    public JsrvCorsConfig getCorsConfig() {
+        return this.corsConfig;
+    }
 
 }
