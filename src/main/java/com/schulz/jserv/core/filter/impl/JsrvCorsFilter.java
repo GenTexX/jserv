@@ -22,7 +22,7 @@ public class JsrvCorsFilter implements JsrvFilter {
     @Override
     public boolean handle(JsrvExchange exchange, JsrvFilterChain jsrvFilterChain) throws Exception {
 
-        JsrvCorsConfig cors = this.server.getCorsConfig();
+        JsrvCorsConfig cors = this.server.getServerConfig().getCorsConfig();
 
         // Set CORS headers
         String allowedOrigin = cors.getAllowedOrigin();

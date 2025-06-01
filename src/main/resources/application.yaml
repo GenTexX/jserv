@@ -12,3 +12,6 @@ jserv:
       - DELETE
     headers:
       - "*"
+  jwt:
+    secret: "26adef91122e9b2bb2b7b1c301af2c07a4ebd2d142c8f1467fbbca60e3e5059f"
+    expiration: 3600

@@ -1,9 +1,7 @@
 package com.schulz.jserv.core;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,18 +20,16 @@ public class JsrvServer {
     private static final Logger logger = LoggerFactory.getLogger(JsrvServer.class);
 
     private List<JsrvStartupTask> startupTasks;
-    private Map<String, JsrvDispatcher> dispatchers;
+    private List<JsrvDispatcher> dispatchers;
     private List<JsrvFilter> filters;
 
     private JsrvServerConfig serverConfig;
 
     private Undertow server;
 
-    private JsrvCorsConfig corsConfig;
-
     public JsrvServer() {
         this.startupTasks = new ArrayList<>();
-        this.dispatchers = new HashMap<>();
+        this.dispatchers = new ArrayList<>();
         this.filters = new ArrayList<>();
     }
 
@@ -87,8 +83,8 @@ public class JsrvServer {
 
         logger.info("Reading server configuration");
 
-        String host = ApplicationConfig.getValue(JsrvServerConfig.HOST_KEY);
-        Integer port = ApplicationConfig.getValue(JsrvServerConfig.PORT_KEY);
+        String host = JsrvApplicationConfig.getValue(JsrvServerConfig.HOST_KEY);
+        Integer port = JsrvApplicationConfig.getValue(JsrvServerConfig.PORT_KEY);
 
         if (host == null) {
             logger.error("Server host configuration is missing");
@@ -98,30 +94,31 @@ public class JsrvServer {
             logger.error("Server port configuration is missing");
             throw new RuntimeException("Server port configuration is missing");
         }
-        this.serverConfig = new JsrvServerConfig(host, port);
+        this.serverConfig = new JsrvServerConfig(host, port, readCorsConfiguration());
 
         logger.info("Server configuration loaded: host={}, port={}", serverConfig.getHost(), serverConfig.getPort());
 
     }
 
-    private void readCorsConfiguration() {
+    private JsrvCorsConfig readCorsConfiguration() {
 
-        if (ApplicationConfig.getValue(JsrvCorsConfig.ENABLED_KEY) != Boolean.TRUE) {
+        
+        if (JsrvApplicationConfig.getValue(JsrvCorsConfig.ENABLED_KEY) != Boolean.TRUE) {
             logger.info("CORS configuration is disabled, skipping CORS setup");
-            return;
+            return null;
         }
-
+        
         logger.info("Reading cors configuration");
-        this.corsConfig = new JsrvCorsConfig();
-
-        String allowedOrigin = ApplicationConfig.getValue(JsrvCorsConfig.ORIGIN_KEY);
+        JsrvCorsConfig config = new JsrvCorsConfig();
+        
+        String allowedOrigin = JsrvApplicationConfig.getValue(JsrvCorsConfig.ORIGIN_KEY);
         if (allowedOrigin == null || allowedOrigin.isEmpty()) {
             logger.warn("CORS origin configuration is missing, defaulting to '*'");
             allowedOrigin = "*"; // Default value
         }
-        this.corsConfig.setAllowedOrigin(allowedOrigin);
+        config.setAllowedOrigin(allowedOrigin);
 
-        List<String> allowedMethodNames = ApplicationConfig.getValue(JsrvCorsConfig.METHODS_KEY);
+        List<String> allowedMethodNames = JsrvApplicationConfig.getValue(JsrvCorsConfig.METHODS_KEY);
         List<JsrvHttpMethod> allowedMethods = new ArrayList<>();
         if (allowedMethodNames != null && !allowedMethodNames.isEmpty()) {
             for (String methodName : allowedMethodNames) {
@@ -136,19 +133,19 @@ public class JsrvServer {
             logger.warn("CORS methods configuration is missing, defaulting to GET, POST, PUT, DELETE, OPTIONS");
             allowedMethods = List.of(JsrvHttpMethod.GET, JsrvHttpMethod.POST, JsrvHttpMethod.PUT, JsrvHttpMethod.DELETE, JsrvHttpMethod.OPTIONS);
         }
-        this.corsConfig.setAllowedMethods(allowedMethods);
+        config.setAllowedMethods(allowedMethods);
 
-        List<String> allowedHeaders = ApplicationConfig.getValue(JsrvCorsConfig.HEADERS_KEY);
+        List<String> allowedHeaders = JsrvApplicationConfig.getValue(JsrvCorsConfig.HEADERS_KEY);
         if (allowedHeaders == null || allowedHeaders.isEmpty()) {
             logger.warn("CORS headers configuration is missing, defaulting to Content-Type, Authorization");
             allowedHeaders = List.of("Content-Type", "Authorization");
         }
 
-        this.corsConfig.setAllowedHeaders(allowedHeaders);
+        config.setAllowedHeaders(allowedHeaders);
 
-        logger.info("Cors configuration loaded: origin={}, methods={}, headers={}", corsConfig.getAllowedOrigin(), corsConfig.getAllowedMethods().orElse(null), corsConfig.getAllowedHeaders().orElse(null));
+        logger.info("Cors configuration loaded: origin={}, methods={}, headers={}", config.getAllowedOrigin(), config.getAllowedMethods().orElse(null), config.getAllowedHeaders().orElse(null));
 
-
+        return config;
 
     }
 
@@ -199,18 +196,12 @@ public class JsrvServer {
             logger.warn("Attempted to add a null dispatcher");
             return;
         }
-        dispatchers.put(dispatcher.getBasePath(), dispatcher);
+        dispatchers.add(dispatcher);
         logger.info("Added dispatcher: {}", dispatcher.getBasePath());
     }
 
-    public JsrvDispatcher getDispatcher(String dispatcherName) {
-        if (dispatcherName == null) {
-            logger.warn("Dispatcher name is null or empty");
-            return null;
-        }
-        JsrvDispatcher dispatcher = dispatchers.get(dispatcherName);
-
-        return dispatcher;
+    public List<JsrvDispatcher> getDispatcher() {
+        return new ArrayList<>(dispatchers);
     }
 
     public List<JsrvFilter> getFilters() {
@@ -271,8 +262,8 @@ public class JsrvServer {
 
     }
 
-    public JsrvCorsConfig getCorsConfig() {
-        return this.corsConfig;
+    public JsrvServerConfig getServerConfig() {
+        return serverConfig;
     }
 
 }

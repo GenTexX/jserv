@@ -5,18 +5,18 @@ import java.util.Map;
 
 import org.yaml.snakeyaml.Yaml;
 
-public class ApplicationConfig {
+public class JsrvApplicationConfig {
 
     private static volatile Map<String, Object> config;
 
     public static Map<String, Object> get() {
         if (config == null) {
-            synchronized (ApplicationConfig.class) {
+            synchronized (JsrvApplicationConfig.class) {
                 if (config == null) {
                     Map<String, Object> temp = null;
 
                     Yaml yaml = new Yaml();
-                    try (InputStream inputStream = ApplicationConfig.class.getClassLoader()
+                    try (InputStream inputStream = JsrvApplicationConfig.class.getClassLoader()
                             .getResourceAsStream("application.yaml")) {
                         if (inputStream == null) {
                             throw new RuntimeException("application.yaml not found in resources folder");

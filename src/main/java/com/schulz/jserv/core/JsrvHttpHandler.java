@@ -1,5 +1,7 @@
 package com.schulz.jserv.core;
 
+import java.util.List;
+
 import com.schulz.jserv.core.dispatcher.JsrvDispatcher;
 import com.schulz.jserv.core.filter.JsrvFilterChain;
 
@@ -17,31 +19,34 @@ public class JsrvHttpHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         
-        // TODO: Filtering
-
-        String[] pathSegments = exchange.getRequestPath().split("/");
+        String path = exchange.getRequestPath();
         JsrvExchange jsrvExchange = new JsrvExchange(exchange);
-
-        if (pathSegments.length > 1) {
-            String dispatcherName = pathSegments[1];
-            if (dispatcherName.isEmpty()) {
-                dispatcherName = ""; // Default dispatcher
-            }
-            dispatchRequest(dispatcherName, jsrvExchange);
-        } else {
-            String dispatcherName = ""; 
-            dispatchRequest(dispatcherName, jsrvExchange);
-        }
+        dispatchRequest(path, jsrvExchange);
 
     }
 
-    private void dispatchRequest(String dispatcherName, JsrvExchange exchange) throws Exception {
-        JsrvDispatcher dispatcher = server.getDispatcher(dispatcherName);
+    private void dispatchRequest(String path, JsrvExchange exchange) throws Exception {
+        List<JsrvDispatcher> dispatchers = server.getDispatcher();
+
+        List<JsrvDispatcher> matchingDispatchers = dispatchers.stream()
+                .filter(d -> d.getBasePath().match(path))
+                .toList();
+
+        if (matchingDispatchers.isEmpty()) {
+            exchange.getExchange().setStatusCode(404);
+            exchange.getExchange().getResponseSender().send("site not found");
+            return;
+        }
+        
+        JsrvDispatcher dispatcher = matchingDispatchers.get(0);
+
         JsrvFilterChain chain = new JsrvFilterChain(this.server.getFilters(), dispatcher);
         if (dispatcher != null) {
             if (!chain.next(exchange)) {
                 exchange.getExchange().setStatusCode(404);
-                exchange.getExchange().getResponseSender().send("Not Found");
+                exchange.getExchange().getResponseSender().send("site not found");
+            } else {
+                exchange.getExchange().getResponseSender().send(exchange.getResponseBody());
             }
         } else {
             exchange.getExchange().setStatusCode(404);

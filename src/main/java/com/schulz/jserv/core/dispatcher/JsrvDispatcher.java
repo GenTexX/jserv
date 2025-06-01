@@ -1,6 +1,7 @@
 package com.schulz.jserv.core.dispatcher;
 
 import com.schulz.jserv.core.JsrvExchange;
+import com.schulz.jserv.http.JsrvUrl;
 
 public interface JsrvDispatcher {
     
@@ -15,8 +16,8 @@ public interface JsrvDispatcher {
     /**
      * Returns the base path for the dispatcher.
      *
-     * @return The base path as a String.
+     * @return The base path as a JsrvUrl.
      */
-    String getBasePath();
+    JsrvUrl getBasePath();
 
 }

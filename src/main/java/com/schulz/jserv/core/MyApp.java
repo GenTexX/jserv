@@ -1,6 +1,7 @@
 package com.schulz.jserv.core;
 
 import com.schulz.jserv.core.dispatcher.JsrvDispatcher;
+import com.schulz.jserv.http.JsrvUrl;
 
 public class MyApp {
     
@@ -18,8 +19,8 @@ public class MyApp {
             }
 
             @Override
-            public String getBasePath() {
-                return "";
+            public JsrvUrl getBasePath() {
+                return JsrvUrl.parse("/");
             }
         });
 
@@ -32,8 +33,8 @@ public class MyApp {
             }
 
             @Override
-            public String getBasePath() {
-                return "hello";
+            public JsrvUrl getBasePath() {
+                return JsrvUrl.parse("/hello");
             }
         });
 

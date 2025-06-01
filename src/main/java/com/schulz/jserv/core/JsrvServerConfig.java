@@ -1,5 +1,7 @@
 package com.schulz.jserv.core;
 
+import com.schulz.jserv.security.cors.JsrvCorsConfig;
+
 public class JsrvServerConfig {
  
     public static final String HOST_KEY = "jserv.server.host";
@@ -7,9 +9,12 @@ public class JsrvServerConfig {
     public static final String PORT_KEY = "jserv.server.port";
     private int port;
 
-    public JsrvServerConfig(String host, int port) {
+    private final JsrvCorsConfig corsConfig;
+
+    public JsrvServerConfig(String host, int port, JsrvCorsConfig corsConfig) {
         this.host = host;
         this.port = port;
+        this.corsConfig = corsConfig;
     }
 
     public String getHost() {
@@ -18,6 +23,10 @@ public class JsrvServerConfig {
 
     public int getPort() {
         return port;
+    }
+
+    public JsrvCorsConfig getCorsConfig() {
+        return corsConfig;
     }
 
 }
