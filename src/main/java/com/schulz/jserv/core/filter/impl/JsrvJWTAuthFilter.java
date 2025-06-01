@@ -13,8 +13,8 @@ import com.schulz.jserv.core.JsrvExchange;
 import com.schulz.jserv.core.JsrvServer;
 import com.schulz.jserv.core.filter.JsrvFilter;
 import com.schulz.jserv.core.filter.JsrvFilterChain;
-import com.schulz.jserv.security.cors.JsrvAuthHandle;
-import com.schulz.jserv.security.cors.JsrvAuthHandle.JsrvNotAuthenticatedHandle;
+import com.schulz.jserv.security.jwt.JsrvAuthHandle;
+import com.schulz.jserv.security.jwt.JsrvAuthHandle.JsrvNotAuthenticatedHandle;
 
 public abstract class JsrvJWTAuthFilter implements JsrvFilter {
 

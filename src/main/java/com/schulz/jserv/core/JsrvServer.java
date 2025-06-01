@@ -12,6 +12,7 @@ import com.schulz.jserv.core.filter.impl.JsrvCorsFilter;
 import com.schulz.jserv.core.filter.impl.JsrvLoggingFilter;
 import com.schulz.jserv.http.JsrvHttpMethod;
 import com.schulz.jserv.security.cors.JsrvCorsConfig;
+import com.schulz.jserv.security.jwt.JsrvJWTConfig;
 
 import io.undertow.Undertow;
 
@@ -94,7 +95,7 @@ public class JsrvServer {
             logger.error("Server port configuration is missing");
             throw new RuntimeException("Server port configuration is missing");
         }
-        this.serverConfig = new JsrvServerConfig(host, port, readCorsConfiguration());
+        this.serverConfig = new JsrvServerConfig(host, port, readCorsConfiguration(), readJWTConfiguration());
 
         logger.info("Server configuration loaded: host={}, port={}", serverConfig.getHost(), serverConfig.getPort());
 
@@ -146,6 +147,29 @@ public class JsrvServer {
         logger.info("Cors configuration loaded: origin={}, methods={}, headers={}", config.getAllowedOrigin(), config.getAllowedMethods().orElse(null), config.getAllowedHeaders().orElse(null));
 
         return config;
+
+    }
+
+    private JsrvJWTConfig readJWTConfiguration() {
+
+        logger.info("Reading JWT configuration");
+
+        String jwtSecret = JsrvApplicationConfig.getValue(JsrvJWTConfig.SECRET_KEY);
+        if (jwtSecret == null || jwtSecret.isEmpty()) {
+            logger.error("JWT secret configuration is missing");
+            throw new RuntimeException("JWT secret configuration is missing");
+        }
+
+        Integer jwtExpirationTime = JsrvApplicationConfig.getValue(JsrvJWTConfig.EXPIRATION_TIME_KEY);
+        if (jwtExpirationTime == null || jwtExpirationTime <= 0) {
+            logger.warn("JWT expiration time is not set or invalid, defaulting to 3600 seconds");
+            jwtExpirationTime = 3600; // Default value
+        }
+
+        JsrvJWTConfig jwtConfig = new JsrvJWTConfig(jwtSecret, jwtExpirationTime);
+        logger.info("JWT configuration loaded: secret={}, expiration={}", jwtConfig.getJwtSecret(), jwtConfig.getJwtExpirationTime());
+
+        return jwtConfig;
 
     }
 

@@ -20,7 +20,7 @@ public class JsrvHttpHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         
         String path = exchange.getRequestPath();
-        JsrvExchange jsrvExchange = new JsrvExchange(exchange);
+        JsrvExchange jsrvExchange = new JsrvExchange(server, exchange);
         dispatchRequest(path, jsrvExchange);
 
     }
@@ -45,8 +45,6 @@ public class JsrvHttpHandler implements HttpHandler {
             if (!chain.next(exchange)) {
                 exchange.getExchange().setStatusCode(404);
                 exchange.getExchange().getResponseSender().send("site not found");
-            } else {
-                exchange.getExchange().getResponseSender().send(exchange.getResponseBody());
             }
         } else {
             exchange.getExchange().setStatusCode(404);

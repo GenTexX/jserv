@@ -1,4 +1,4 @@
-package com.schulz.jserv.security.cors;
+package com.schulz.jserv.security.jwt;
 
 import java.util.List;
 

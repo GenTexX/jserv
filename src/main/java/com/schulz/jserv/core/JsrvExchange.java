@@ -1,17 +1,22 @@
 package com.schulz.jserv.core;
 
-import com.schulz.jserv.http.JsrvUrl;
-import com.schulz.jserv.security.cors.JsrvAuthHandle;
+import java.util.function.Consumer;
 
+import com.google.gson.Gson;
+import com.schulz.jserv.http.JsrvUrl;
+import com.schulz.jserv.security.jwt.JsrvAuthHandle;
+
+import io.undertow.io.Receiver.FullBytesCallback;
 import io.undertow.server.HttpServerExchange;
 
 public class JsrvExchange {
 
     private HttpServerExchange exchange;
     private JsrvAuthHandle authHandle;
-    private String body;
+    private JsrvServer server;
     
-    public JsrvExchange(HttpServerExchange exchange) {
+    public JsrvExchange(JsrvServer server, HttpServerExchange exchange) {
+        this.server = server;
         this.exchange = exchange;
     }
 
@@ -19,8 +24,25 @@ public class JsrvExchange {
         return exchange;
     }
 
+    public JsrvServer getServer() {
+        return server;
+    }
+
     public JsrvUrl getRequestUrl() {
         return JsrvUrl.parse(exchange.getRequestPath());
+    }
+
+    public <T> void getRequestBody(Class<T> clazz, Consumer<T> consumer) {
+        exchange.getRequestReceiver().receiveFullBytes(new FullBytesCallback() {
+            @Override
+            public void handle(HttpServerExchange exchange, byte[] bytes) {
+                String requestBody = new String(bytes);
+
+                T result = new Gson().fromJson(requestBody, clazz);
+
+                consumer.accept(result);
+            }
+        });
     }
 
     /******************/
@@ -41,14 +63,6 @@ public class JsrvExchange {
 
     public void setStatusCode(int statusCode) {
         this.exchange.setStatusCode(statusCode);
-    }
-
-    public void setResponseBody(String body) {
-        this.body = body;
-    }
-
-    public String getResponseBody() {
-        return body;
     }
 
 }
